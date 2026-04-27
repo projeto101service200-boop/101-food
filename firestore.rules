@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isEmailVerified() { return request.auth.token.email_verified == true; }
+    function getRole() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        getRole() == 'admin' || 
+        request.auth.token.email == 'projeto101service200@gmail.com'
+      ); 
+    }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.role == 'customer';
+      allow update: if isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status']);
+      allow update: if isAdmin();
+    }
+
+    // Restaurants
+    match /restaurants/{resId} {
+      allow read: if true;
+      allow create, update: if isAdmin();
+      allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // Foods & Categories
+    match /foods/{foodId} {
+      allow read: if true;
+      allow write: if isSignedIn() && (isAdmin() || (get(/databases/$(database)/documents/restaurants/$(request.resource.data.restaurantId)).data.ownerId == request.auth.uid));
+    }
+
+    // Orders
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && (
+        resource.data.customerId == request.auth.uid || 
+        resource.data.riderId == request.auth.uid ||
+        get(/databases/$(database)/documents/restaurants/$(resource.data.restaurantId)).data.ownerId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isSignedIn() && request.resource.data.customerId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        // Client can only cancel or update own order if pending
+        (resource.data.customerId == request.auth.uid && request.resource.data.orderStatus == 'CANCELLED' && resource.data.orderStatus == 'PENDING') ||
+        // Restaurant status updates
+        (get(/databases/$(database)/documents/restaurants/$(resource.data.restaurantId)).data.ownerId == request.auth.uid) ||
+        // Rider status updates
+        (resource.data.riderId == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+
+    // Zones & Configs
+    match /zones/{zoneId} { allow read: if true; allow write: if isAdmin(); }
+    match /configurations/{configId} { allow read: if true; allow write: if isAdmin(); }
+  }
+}

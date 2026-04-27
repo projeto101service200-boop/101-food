@@ -1,0 +1,126 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user with role-based access and custom claims information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "restaurant", "rider", "admin"] },
+        "status": { "type": "string", "enum": ["active", "blocked", "pending"] },
+        "fcmToken": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Restaurant": {
+      "title": "Restaurant",
+      "description": "Vendor profile and business settings",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "image": { "type": "string" },
+        "address": { "type": "string" },
+        "location": { "type": "object" },
+        "deliveryFee": { "type": "number" },
+        "minOrder": { "type": "number" },
+        "tax": { "type": "number" },
+        "isOpen": { "type": "boolean" },
+        "zoneId": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviewsCount": { "type": "number" }
+      }
+    },
+    "Food": {
+      "title": "Food",
+      "description": "Menu items with options and addons",
+      "type": "object",
+      "properties": {
+        "restaurantId": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string" },
+        "basePrice": { "type": "number" },
+        "variations": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "price": { "type": "number" }
+            }
+          }
+        },
+        "addons": {
+          "type": "array",
+          "items": { "type": "string" } 
+        },
+        "isAvailable": { "type": "boolean" }
+      }
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Transactional order data",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "customerId": { "type": "string" },
+        "restaurantId": { "type": "string" },
+        "riderId": { "type": "string" },
+        "items": { "type": "array" },
+        "paymentMethod": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "orderStatus": { "type": "string", "enum": ["PENDING", "ACCEPTED", "PICKED", "DELIVERED", "CANCELLED"] },
+        "deliveryAddress": { "type": "object" },
+        "subTotal": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "total": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "acceptedAt": { "type": "string" },
+        "deliveredAt": { "type": "string" }
+      }
+    },
+    "Addon": {
+      "title": "Addon",
+      "properties": {
+        "restaurantId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "description": { "type": "string" }
+      }
+    },
+    "Configuration": {
+       "title": "App Configurations",
+       "properties": {
+         "currency": { "type": "string" },
+         "currencySymbol": { "type": "string" },
+         "deliveryDistanceLimit": { "type": "number" },
+         "isMaintenance": { "type": "boolean" }
+       }
+    }
+    "Table": {
+      "title": "Restaurant Table",
+      "properties": {
+        "restaurantId": { "type": "string" },
+        "number": { "type": "string" },
+        "qrCodeUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["free", "busy", "pending_payment"] }
+      }
+    }
+  },
+  "firestore": {
+    "users": { "schema": "User", "description": "Global users" },
+    "restaurants": { "schema": "Restaurant", "description": "Vendors" },
+    "orders": { "schema": "Order", "description": "Transactional records" },
+    "tables": { "schema": "Table", "description": "Physical tables in restaurant" },
+    "foods": { "schema": "Food", "description": "Menu items" },
+    "addons": { "schema": "Addon", "description": "Extra items" },
+    "categories": { "schema": "object", "description": "Menu categories" },
+    "configurations": { "schema": "Configuration", "description": "Global settings" },
+    "zones": { "schema": "object", "description": "Delivery geofences" }
+  }
+}

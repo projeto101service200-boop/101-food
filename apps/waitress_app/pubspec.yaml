@@ -1,0 +1,26 @@
+name: waitress_app
+description: Waitress application for Velox Delivery (Dine-in management)
+version: 1.0.0+1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^3.0.0
+  firebase_auth: ^5.0.0
+  cloud_firestore: ^5.0.0
+  flutter_riverpod: ^2.4.0
+  google_fonts: ^6.1.0
+  shared_core:
+    path: ../../packages/shared_core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

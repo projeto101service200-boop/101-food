@@ -1,0 +1,12 @@
+{
+  "name": "Velox Multivendor (Enatega Clone)",
+  "description": "Plataforma completa de delivery multivendor. Módulos: Customer, Restaurant, Rider e Admin Web.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "real_time_updates",
+    "maps_integration",
+    "cloud_functions_logic"
+  ]
+}
