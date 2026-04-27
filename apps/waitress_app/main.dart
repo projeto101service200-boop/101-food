@@ -8,6 +8,9 @@ void main() {
 
 import 'lib/screens/table_management_screen.dart';
 import 'lib/screens/manual_order_screen.dart';
+import 'lib/screens/split_bill_screen.dart';
+import 'lib/providers/service_providers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class WaitressApp extends StatelessWidget {
   const WaitressApp({super.key});
@@ -34,17 +37,28 @@ class WaitressApp extends StatelessWidget {
             builder: (context) => ManualOrderScreen(tableNumber: tableNumber),
           );
         }
+        if (settings.name == '/split-bill') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (context) => SplitBillScreen(
+              tableNumber: args['tableNumber'],
+              totalAmount: args['totalAmount'],
+            ),
+          );
+        }
         return null;
       },
     );
   }
 }
 
-class WaitressDashboard extends StatelessWidget {
+class WaitressDashboard extends ConsumerWidget {
   const WaitressDashboard({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notificationsAsync = ref.watch(notificationsProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Painel do Garçom'),
@@ -65,12 +79,49 @@ class WaitressDashboard extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView(
-              children: [
-                _buildNotificationTile('Mesa 05', 'Novo Pedido: 2x Burger, 1x Coca', 'há 2 min', true),
-                _buildNotificationTile('Mesa 12', 'Cliente Chamando Garçom', 'há 5 min', false),
-                _buildNotificationTile('Mesa 03', 'Pedido de Conta', 'há 10 min', false),
-              ],
+            child: notificationsAsync.when(
+              data: (snapshot) {
+                if (snapshot.docs.isEmpty) {
+                  return const Center(child: Text('Nenhuma notificação nova.'));
+                }
+                return ListView(
+                  children: snapshot.docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final type = data['type'] ?? '';
+                    
+                    Color statusColor = Colors.deepPurple;
+                    IconData icon = Icons.notifications;
+                    String message = data['message'] ?? 'Notificação';
+                    bool isUrgent = false;
+
+                    if (type == 'CALL_WAITER') {
+                      statusColor = Colors.red;
+                      icon = Icons.pan_tool;
+                      isUrgent = true;
+                    } else if (type == 'BILL_REQUEST') {
+                      statusColor = Colors.green;
+                      icon = Icons.receipt_long;
+                      isUrgent = true;
+                    } else if (type == 'DINE_IN') {
+                      statusColor = Colors.orange;
+                      icon = Icons.restaurant_menu;
+                    }
+
+                    return _buildNotificationTile(
+                      data['tableNumber'] ?? 'Mesa ?',
+                      message,
+                      'agora',
+                      isUrgent,
+                      doc.id,
+                      ref,
+                      statusColor,
+                      icon
+                    );
+                  }).toList(),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Erro: $err')),
             ),
           ),
         ],
@@ -100,32 +151,38 @@ class WaitressDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildNotificationTile(String table, String message, String time, bool isUrgent) {
+  Widget _buildNotificationTile(String table, String message, String time, bool isUrgent, String docId, WidgetRef ref, Color color, IconData icon) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isUrgent ? Colors.orange.shade50 : Colors.white,
+        color: isUrgent ? color.withOpacity(0.05) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isUrgent ? Colors.orange.shade200 : Colors.grey.shade200),
+        border: Border.all(color: isUrgent ? color.withOpacity(0.3) : Colors.grey.shade200),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: isUrgent ? Colors.orange : Colors.deepPurple,
-            child: Text(table.split(' ')[1], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            backgroundColor: color,
+            child: Icon(icon, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(message, style: TextStyle(fontWeight: isUrgent ? FontWeight.bold : FontWeight.normal)),
-                Text(time, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(message, style: TextStyle(fontWeight: isUrgent ? FontWeight.bold : FontWeight.normal, color: isUrgent ? color : Colors.black)),
+                Text('Mesa ${table.contains(' ') ? table.split(' ')[1] : table} • $time', style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),
           ),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.check_circle_outline, color: Colors.green)),
+          IconButton(
+            onPressed: () {
+              // Marcar como lida/Concluída deletando ou trocando status
+              FirebaseFirestore.instance.collection('notifications').doc(docId).delete();
+            }, 
+            icon: const Icon(Icons.check_circle_outline, color: Colors.green)
+          ),
         ],
       ),
     );

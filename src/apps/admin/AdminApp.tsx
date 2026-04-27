@@ -36,6 +36,7 @@ export function AdminApp() {
             { id: 'restaurants', label: 'Restaurants', icon: Store },
             { id: 'riders', label: 'Riders', icon: Bike },
             { id: 'users', label: 'Customers', icon: Users },
+            { id: 'tables', label: 'Digital Tables', icon: ClipboardList },
             { id: 'approvals', label: 'Approvals', icon: ShieldAlert, badge: 3 },
             { id: 'settings', label: 'Settings', icon: Settings },
           ].map(item => (
@@ -176,6 +177,40 @@ export function AdminApp() {
                     <Button variant="outline" size="sm">View Details</Button>
                     <Button className="bg-emerald-600 hover:bg-emerald-700" size="sm">Approve</Button>
                   </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeView === 'tables' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold">Gestão de Mesas Digitais</h3>
+                <p className="text-sm text-slate-400">Configure as mesas e visualize os QR Codes de acesso.</p>
+              </div>
+              <Button>Criar Nova Mesa</Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map(num => (
+                <Card key={num} className="p-6">
+                   <div className="flex justify-between items-center mb-6">
+                      <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Mesa {num.toString().padStart(2, '0')}</span>
+                      <Button variant="ghost" size="sm">Editar</Button>
+                   </div>
+                   <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl aspect-square flex flex-col items-center justify-center gap-4 p-8">
+                      {/* Fake QR Code */}
+                      <div className="w-full h-full bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+                         <ClipboardList size={64} />
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-mono">VELOX-TABLE-{num}-HASH</p>
+                   </div>
+                   <div className="mt-6 space-y-3">
+                      <Button className="w-full py-2">Imprimir QR Code</Button>
+                      <Button variant="secondary" className="w-full py-2">Visualizar Cardápio</Button>
+                   </div>
                 </Card>
               ))}
             </div>

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'lib/screens/delivery_route_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: RiderApp()));
@@ -23,6 +24,7 @@ class RiderApp extends StatelessWidget {
       routes: {
         '/login': (context) => const RiderLoginScreen(),
         '/dashboard': (context) => const RiderDashboard(),
+        '/route': (context) => const DeliveryRouteScreen(),
       },
     );
   }
@@ -158,7 +160,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
               Text(distance, style: const TextStyle(color: Colors.grey)),
               const Spacer(),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () => Navigator.pushNamed(context, '/route'),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                 child: const Text('ACEITAR'),
               ),

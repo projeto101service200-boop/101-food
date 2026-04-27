@@ -11,6 +11,8 @@ class OrderModel {
   final double subTotal;
   final double deliveryFee;
   final double total;
+  final String type; // 'DELIVERY' ou 'DINE_IN'
+  final String? tableNumber;
   final DateTime createdAt;
 
   OrderModel({
@@ -24,6 +26,8 @@ class OrderModel {
     required this.subTotal,
     required this.deliveryFee,
     required this.total,
+    required this.type,
+    this.tableNumber,
     required this.createdAt,
   });
 
@@ -39,7 +43,9 @@ class OrderModel {
       subTotal: (map['subTotal'] ?? 0.0).toDouble(),
       deliveryFee: (map['deliveryFee'] ?? 0.0).toDouble(),
       total: (map['total'] ?? 0.0).toDouble(),
-      createdAt: DateTime.parse(map['createdAt'] ?? DateTime.now().toIso8601String()),
+      type: map['type'] ?? 'DELIVERY',
+      tableNumber: map['tableNumber'],
+      createdAt: map['createdAt'] != null ? (map['createdAt'] as dynamic).toDate() : DateTime.now(),
     );
   }
 
@@ -54,7 +60,9 @@ class OrderModel {
       'subTotal': subTotal,
       'deliveryFee': deliveryFee,
       'total': total,
-      'createdAt': createdAt.toIso8601String(),
+      'type': type,
+      'tableNumber': tableNumber,
+      'createdAt': createdAt,
     };
   }
 }

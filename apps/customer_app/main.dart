@@ -2,11 +2,13 @@
 // Ele será preenchido gradualmente conforme o desenvolvimento avança.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lib/theme/app_theme.dart';
 import 'lib/screens/restaurant_menu_screen.dart';
 import 'lib/screens/product_detail_screen.dart';
 import 'lib/screens/checkout_screen.dart';
 import 'lib/screens/dine_in_scanner_screen.dart';
+import 'lib/screens/loyalty_screen.dart';
 import 'lib/widgets/restaurant_card.dart';
 import 'lib/providers/service_providers.dart';
 
@@ -30,6 +32,7 @@ class CustomerApp extends StatelessWidget {
         '/checkout': (context) => const CheckoutScreen(),
         '/tracking': (context) => const TrackingScreen(),
         '/dine-in': (context) => const DineInScannerScreen(),
+        '/loyalty': (context) => const LoyaltyScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/menu') {
@@ -146,11 +149,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 }
 
-class TrackingScreen extends StatelessWidget {
+class TrackingScreen extends ConsumerWidget {
   const TrackingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final isDineIn = args?['type'] == 'DINE_IN';
 
@@ -179,11 +182,26 @@ class TrackingScreen extends StatelessWidget {
             ],
             const SizedBox(height: 48),
             ElevatedButton.icon(
-              onPressed: () {
-                // Simular chamado de garçom
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Garçom notificado! Já estamos indo até você.'))
-                );
+              onPressed: () async {
+                // Notificar Garçom no Firestore via DatabaseService
+                try {
+                  await ref.read(databaseServiceProvider).notifyWaiter(
+                    restaurantId: 'res_001', // Mock or get from order
+                    tableNumber: '05',
+                    type: 'CALL_WAITER',
+                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Garçom notificado! Já estamos indo até você.'))
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Erro ao chamar garçom: $e'))
+                    );
+                  }
+                }
               },
               icon: const Icon(Icons.notifications_active),
               label: const Text('CHAMAR GARÇOM'),
@@ -193,6 +211,32 @@ class TrackingScreen extends StatelessWidget {
                 side: const BorderSide(color: AppTheme.primaryColor),
               ),
             ),
+            const SizedBox(height: 16),
+            if (isDineIn)
+              TextButton(
+                onPressed: () async {
+                  // Pedir conta via DatabaseService
+                  try {
+                    await ref.read(databaseServiceProvider).notifyWaiter(
+                      restaurantId: 'res_001',
+                      tableNumber: '05',
+                      type: 'BILL_REQUEST',
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Pedido de conta enviado. O garçom trará a maquininha.'))
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Erro ao pedir conta: $e'))
+                      );
+                    }
+                  }
+                },
+                child: const Text('PEDIR CONTA (FECHAR MESA)', style: TextStyle(color: Colors.red)),
+              ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false),
@@ -205,6 +249,7 @@ class TrackingScreen extends StatelessWidget {
     );
   }
 }
+
 
 
 class HomeScreen extends ConsumerWidget {
@@ -280,6 +325,28 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
                     Icon(Icons.chevron_right, color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Loyalty Points Widget
+            InkWell(
+              onTap: () => Navigator.pushNamed(context, '/loyalty'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.star, color: Colors.orange),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text('Você tem 450 pontos de fidelidade', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                    ),
+                    Icon(Icons.arrow_forward_ios, size: 14, color: Colors.orange),
                   ],
                 ),
               ),

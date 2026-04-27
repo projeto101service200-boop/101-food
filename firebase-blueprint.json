@@ -12,6 +12,17 @@
         "role": { "type": "string", "enum": ["customer", "restaurant", "rider", "admin"] },
         "status": { "type": "string", "enum": ["active", "blocked", "pending"] },
         "fcmToken": { "type": "string" },
+        "loyaltyPoints": { "type": "number", "description": "Balance for rewards" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "LoyaltyTransaction": {
+      "title": "Loyalty Transaction",
+      "properties": {
+        "userId": { "type": "string" },
+        "points": { "type": "number" },
+        "type": { "type": "string", "enum": ["EARNED", "REDEEMED"] },
+        "orderId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
@@ -117,6 +128,7 @@
     "restaurants": { "schema": "Restaurant", "description": "Vendors" },
     "orders": { "schema": "Order", "description": "Transactional records" },
     "tables": { "schema": "Table", "description": "Physical tables in restaurant" },
+    "loyalty_transactions": { "schema": "LoyaltyTransaction", "description": "History of points" },
     "foods": { "schema": "Food", "description": "Menu items" },
     "addons": { "schema": "Addon", "description": "Extra items" },
     "categories": { "schema": "object", "description": "Menu categories" },

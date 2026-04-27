@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/cart_provider.dart';
+import '../providers/service_providers.dart';
 import '../theme/app_theme.dart';
+import 'package:shared_core/models/order_model.dart';
 
-class CheckoutScreen extends ConsumerWidget {
+class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartProvider);
+  ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
+}
 
+class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
+  bool _isLoading = false;
+  String _paymentMethod = 'CASH'; // 'CASH' ou 'PIX'
+
+  @override
+  Widget build(BuildContext context) {
+    final cart = ref.watch(cartProvider);
     final isDineIn = ModalRoute.of(context)?.settings.arguments as bool? ?? false;
 
     return Scaffold(
@@ -47,6 +56,103 @@ class CheckoutScreen extends ConsumerWidget {
               _buildBottomBar(context, cart, isDineIn),
             ],
           ),
+    );
+  }
+
+  Future<void> _handleCheckout(bool isDineIn, CartState cart) async {
+    setState(() => _isLoading = true);
+    try {
+      final user = ref.read(userStateProvider).value;
+      if (user == null) throw Exception('Usuário não autenticado');
+
+      final order = OrderModel(
+        orderId: '', // Gerado pelo Firestore
+        customerId: user.uid,
+        restaurantId: 'res_001', // Mock por enquanto
+        items: cart.items.map((item) => {
+          'name': item.name,
+          'price': item.price,
+          'quantity': item.quantity,
+          'size': item.size,
+        }).toList(),
+        paymentMethod: _paymentMethod,
+        orderStatus: OrderStatus.PENDING,
+        subTotal: cart.total,
+        deliveryFee: isDineIn ? 0.0 : 5.0,
+        total: cart.total + (isDineIn ? 0.0 : 5.0),
+        type: isDineIn ? 'DINE_IN' : 'DELIVERY',
+        tableNumber: isDineIn ? '05' : null,
+        createdAt: DateTime.now(),
+      );
+
+      await ref.read(databaseServiceProvider).createOrder(order);
+      
+      if (_paymentMethod == 'PIX') {
+        _showPixPayment(cart.total + (isDineIn ? 0.0 : 5.0), isDineIn);
+        return;
+      }
+
+      // Limpar carrinho
+      ref.read(cartProvider.notifier).clear();
+
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/tracking', arguments: {'type': isDineIn ? 'DINE_IN' : 'DELIVERY'});
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao finalizar pedido: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showPixPayment(double amount, bool isDineIn) async {
+    final database = ref.read(databaseServiceProvider);
+    final pixData = await database.generatePix(amount);
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Pagamento via Pix', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('Escaneie o QR Code ou copie a chave abaixo', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 32),
+            Image.network(pixData['qrCodeUrl'], height: 200),
+            const SizedBox(height: 32),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                children: [
+                  Expanded(child: Text(pixData['payload'], maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'monospace', fontSize: 12))),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.copy, size: 20, color: AppTheme.primaryColor),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ref.read(cartProvider.notifier).clear();
+                Navigator.pushReplacementNamed(context, '/tracking', arguments: {'type': isDineIn ? 'DINE_IN' : 'DELIVERY'});
+              },
+              child: const Text('JÁ PAGUEI'),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
     );
   }
 
@@ -134,20 +240,34 @@ class CheckoutScreen extends ConsumerWidget {
   }
 
   Widget _buildPaymentTile() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.payments_outlined, color: Colors.green),
-          SizedBox(width: 16),
-          Expanded(child: Text('Dinheiro (na entrega)', style: TextStyle(fontWeight: FontWeight.bold))),
-          Icon(Icons.keyboard_arrow_right, color: Colors.grey),
-        ],
+    return Column(
+      children: [
+        _paymentOption('PIX', 'Pix (Rápido e Seguro)', Icons.qr_code, Colors.indigo),
+        const SizedBox(height: 12),
+        _paymentOption('CASH', 'Dinheiro (na entrega)', Icons.payments_outlined, Colors.green),
+      ],
+    );
+  }
+
+  Widget _paymentOption(String id, String label, IconData icon, Color color) {
+    bool isSelected = _paymentMethod == id;
+    return InkWell(
+      onTap: () => setState(() => _paymentMethod = id),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.05) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isSelected ? color : Colors.grey.shade200, width: isSelected ? 2 : 1),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 16),
+            Expanded(child: Text(label, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal))),
+            if (isSelected) Icon(Icons.check_circle, color: color, size: 20),
+          ],
+        ),
       ),
     );
   }
@@ -193,11 +313,10 @@ class CheckoutScreen extends ConsumerWidget {
               child: Text('Você está na Mesa 05', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
             ),
           ElevatedButton(
-            onPressed: () {
-              // Finalizar pedido e ir para acompanhamento
-              Navigator.pushNamed(context, '/tracking', arguments: {'type': isDineIn ? 'DINE_IN' : 'DELIVERY'});
-            },
-            child: Text(isDineIn ? 'ENVIAR PEDIDO PARA COZINHA' : 'FINALIZAR PEDIDO'),
+            onPressed: _isLoading ? null : () => _handleCheckout(isDineIn, cart),
+            child: _isLoading 
+              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : Text(isDineIn ? 'ENVIAR PEDIDO PARA COZINHA' : 'FINALIZAR PEDIDO'),
           ),
         ],
       ),

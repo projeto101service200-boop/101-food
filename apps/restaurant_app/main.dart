@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'lib/screens/kds_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: RestaurantApp()));
@@ -23,6 +24,7 @@ class RestaurantApp extends StatelessWidget {
       routes: {
         '/login': (context) => const RestaurantLoginScreen(),
         '/dashboard': (context) => const RestaurantDashboard(),
+        '/kds': (context) => const KdsScreen(),
       },
     );
   }
@@ -73,6 +75,7 @@ class RestaurantDashboard extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Painel do Restaurante'),
         actions: [
+          IconButton(onPressed: () => Navigator.pushNamed(context, '/kds'), icon: const Icon(Icons.kitchen_outlined, color: Colors.deepOrange)),
           IconButton(onPressed: () {}, icon: const Icon(Icons.settings_outlined)),
         ],
       ),
@@ -81,7 +84,7 @@ class RestaurantDashboard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStatRow(),
+            _buildStatRow(context),
             const SizedBox(height: 32),
             const Text('PEDIDOS DE MESA (DINE-IN)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
             const SizedBox(height: 16),
@@ -146,12 +149,18 @@ class RestaurantDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatRow() {
+  Widget _buildStatRow(BuildContext context) {
     return Row(
       children: [
         _buildStatCard('Hoje', 'R$ 450,00', Icons.monetization_on, Colors.green),
         const SizedBox(width: 16),
-        _buildStatCard('Pedidos', '12', Icons.shopping_bag, Colors.blue),
+        GestureDetector(
+          onTap: () => Navigator.pushNamed(context, '/kds'),
+          child: SizedBox(
+            width: 150,
+            child: _buildStatCard('Tela Cozinha', 'SISTEMA KDS', Icons.kitchen, Colors.deepOrange),
+          ),
+        ),
       ],
     );
   }

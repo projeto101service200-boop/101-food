@@ -64,5 +64,18 @@ service cloud.firestore {
     // Zones & Configs
     match /zones/{zoneId} { allow read: if true; allow write: if isAdmin(); }
     match /configurations/{configId} { allow read: if true; allow write: if isAdmin(); }
+
+    // Tables Collection
+    match /tables/{tableId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || getRole() == 'waiter' || getRole() == 'manager';
+    }
+
+    // Notifications Collection (Para Comanda Digital e Garçom)
+    match /notifications/{notificationId} {
+      allow create: if isSignedIn(); // Qualquer cliente logado pode criar notificação (ex: Chamar Garçom)
+      allow read, update: if isSignedIn() && (getRole() == 'waiter' || isAdmin() || getRole() == 'manager' || getRole() == 'vendor');
+      allow delete: if isAdmin();
+    }
   }
 }
